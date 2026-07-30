@@ -2,7 +2,7 @@
   <div style="padding: 24px;">
     <div class="page-header">
       <h1>📝 考试管理</h1>
-      <p style="color: #909399; margin-top: 8px;">管理考试安排</p>
+      <p style="color: #909399; margin-top: 8px;">管理考试安排，支持新增、编辑、删除及添加考生</p>
     </div>
 
     <div class="panel">
@@ -13,7 +13,7 @@
       <div class="panel-body">
         <div class="toolbar">
           <input type="text" class="search-input" placeholder="🔍 搜索考试名称" v-model="keyword" @keyup.enter="loadData">
-          <select class="filter-select" v-model="filterCourseId">
+          <select class="filter-select" v-model="filterCourseId" @change="loadData">
             <option :value="null">全部课程</option>
             <option v-for="course in courseList" :key="course.id" :value="course.id">
               {{ course.courseName }}
@@ -35,7 +35,7 @@
               <th>地点</th>
               <th>类型</th>
               <th>状态</th>
-              <th style="width:140px">操作</th>
+              <th style="width:200px">操作</th>
             </tr>
             </thead>
             <tbody>
@@ -56,6 +56,7 @@
               <td><span class="tag" :class="statusTagMap[item.status]">{{ statusLabelMap[item.status] }}</span></td>
               <td>
                 <button class="btn btn-text btn-sm" @click="openForm(item)">✏️ 编辑</button>
+                <button class="btn btn-text btn-sm" @click="openStudentCourse(item.courseId, item.examName)">👥 添加考生</button>
                 <button class="btn btn-text btn-sm" style="color:#F56C6C" @click="handleDelete(item.id, item.examName)">🗑 删除</button>
               </td>
             </tr>
@@ -133,6 +134,14 @@
         </div>
       </div>
     </div>
+
+    <!-- 选课管理弹窗（添加考生） -->
+    <StudentCourseDialog
+        v-model:visible="studentDialogVisible"
+        :course-id="currentCourseId"
+        :course-name="currentCourseName"
+        @success="loadData"
+    />
   </div>
 </template>
 
@@ -141,6 +150,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getExamPage, saveOrUpdateExam, deleteExam } from '@/api/exam'
 import { getCoursePage } from '@/api/course'
+import StudentCourseDialog from '@/components/StudentCourseDialog.vue'
 
 // ===== 数据 =====
 const tableData = ref([])
@@ -164,6 +174,11 @@ const form = reactive({
   location: '',
   examType: ''
 })
+
+// 选课弹窗
+const studentDialogVisible = ref(false)
+const currentCourseId = ref(null)
+const currentCourseName = ref('')
 
 // ===== 标签映射 =====
 const typeTagMap = {
@@ -274,9 +289,20 @@ const handleDelete = (id, name) => {
       loadData()
     } catch (error) {
       console.error(error)
-      ElMessage.error('删除失败')
+      ElMessage.error('删除失败，该考试可能有关联数据')
     }
   }).catch(() => {})
+}
+
+// 打开添加考生弹窗
+const openStudentCourse = (courseId, examName) => {
+  if (!courseId) {
+    ElMessage.warning('该考试未关联课程，无法添加考生')
+    return
+  }
+  currentCourseId.value = courseId
+  currentCourseName.value = examName
+  studentDialogVisible.value = true
 }
 
 onMounted(() => {
@@ -298,13 +324,18 @@ onMounted(() => {
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 16px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: all .2s; }
 .btn-primary { background: #409EFF; color: #fff; }
 .btn-primary:hover { background: #337ECC; }
+.btn-primary:disabled { opacity: .6; cursor: not-allowed; }
 .btn-default { background: #fff; color: #606266; border: 1px solid #DCDFE6; }
 .btn-default:hover { color: #409EFF; border-color: #409EFF; }
 .btn-text { background: transparent; color: #409EFF; }
 .btn-text:hover { background: #ECF5FF; }
 .btn-sm { height: 30px; padding: 0 12px; font-size: 13px; }
-.btn:disabled { opacity: .6; cursor: not-allowed; }
-.text-center { text-align: center; }
+.tag { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+.tag-blue { background: #ECF5FF; color: #409EFF; }
+.tag-green { background: #F0F9EB; color: #67C23A; }
+.tag-orange { background: #FDF6EC; color: #E6A23C; }
+.tag-red { background: #FEF0F0; color: #F56C6C; }
+.tag-gray { background: #F4F4F5; color: #909399; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 table th, table td { padding: 12px 14px; text-align: left; font-size: 14px; border-bottom: 1px solid #EBEEF5; }
@@ -316,12 +347,6 @@ table tbody tr:hover { background: #F5F7FA; }
 .page-btn.active { background: #409EFF; color: #fff; border-color: #409EFF; }
 .page-btn.disabled { opacity: .4; cursor: not-allowed; }
 .page-info { font-size: 13px; color: #909399; margin: 0 8px; }
-.tag { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 12px; font-weight: 500; }
-.tag-blue { background: #ECF5FF; color: #409EFF; }
-.tag-green { background: #F0F9EB; color: #67C23A; }
-.tag-orange { background: #FDF6EC; color: #E6A23C; }
-.tag-red { background: #FEF0F0; color: #F56C6C; }
-.tag-gray { background: #F4F4F5; color: #909399; }
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); z-index: 1000; display: flex; align-items: center; justify-content: center; }
 .modal { background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,.12); width: 560px; max-height: 85vh; overflow: hidden; }
 .modal-header { padding: 16px 20px; border-bottom: 1px solid #EBEEF5; display: flex; align-items: center; justify-content: space-between; }

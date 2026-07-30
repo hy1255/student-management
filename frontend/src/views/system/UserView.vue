@@ -12,7 +12,7 @@
       </div>
       <div class="panel-body">
         <div class="toolbar">
-          <input type="text" class="search-input" placeholder="🔍 搜索用户名或姓名" v-model="keyword" @keyup.enter="loadData">
+          <input type="text" class="search-input" placeholder="🔍 搜索用户名或真实姓名" v-model="keyword" @keyup.enter="loadData">
           <button class="btn btn-default" @click="loadData">搜索</button>
           <button class="btn btn-text" @click="resetSearch">重置</button>
         </div>
@@ -27,7 +27,7 @@
               <th>角色</th>
               <th>状态</th>
               <th>创建时间</th>
-              <th style="width:200px;">操作</th>
+              <th>操作</th>
             </tr>
             </thead>
             <tbody>
@@ -42,13 +42,12 @@
               <td><b>{{ item.username }}</b></td>
               <td>{{ item.realName }}</td>
               <td><span class="tag" :class="roleTagMap[item.role]">{{ roleLabelMap[item.role] }}</span></td>
-              <td><span class="tag" :class="item.status === 1 ? 'tag-green' : 'tag-gray'">{{ item.status === 1 ? '● 启用' : '○ 禁用' }}</span></td>
-              <td class="text-sm">{{ item.createTime?.slice(0,10) || '-' }}</td>
+              <td><span class="tag" :class="item.status === 1 ? 'tag-green' : 'tag-gray'">{{ item.status === 1 ? '启用' : '禁用' }}</span></td>
+              <td class="text-sm text-muted">{{ item.createTime?.slice(0,10) || '-' }}</td>
               <td>
                 <button class="btn btn-text btn-sm" @click="openForm(item)">✏️ 编辑</button>
-                <button class="btn btn-text btn-sm" style="color:#E6A23C;" @click="handleResetPassword(item.id, item.username)">🔑 重置</button>
-                <button v-if="item.role !== 'ADMIN'" class="btn btn-text btn-sm" style="color:#F56C6C;" @click="handleDelete(item.id, item.username)">🗑 删除</button>
-                <span v-else class="tag tag-gray" style="margin-left:4px;">内置</span>
+                <button class="btn btn-text btn-sm" style="color:#E6A23C" @click="handleResetPassword(item.id, item.username)">🔑 重置</button>
+                <button class="btn btn-text btn-sm" style="color:#F56C6C" @click="handleDelete(item.id, item.username)">🗑 删除</button>
               </td>
             </tr>
             </tbody>
@@ -75,7 +74,7 @@
           <div class="form-row">
             <div class="form-item">
               <label>用户名 <span class="required">*</span></label>
-              <input type="text" v-model="form.username" placeholder="请输入用户名" :readonly="!!form.id" style="background:#F5F7FA;">
+              <input type="text" v-model="form.username" placeholder="3-20位字母数字" :readonly="!!form.id" style="background:#F5F7FA;">
             </div>
             <div class="form-item">
               <label>真实姓名 <span class="required">*</span></label>
@@ -84,8 +83,8 @@
           </div>
           <div class="form-row">
             <div class="form-item">
-              <label>密码 <span v-if="!form.id" class="required">*</span></label>
-              <input type="password" v-model="form.password" :placeholder="form.id ? '留空则不修改密码' : '请输入6-20位密码'">
+              <label>密码 <span class="required" v-if="!form.id">*</span></label>
+              <input type="password" v-model="form.password" :placeholder="form.id ? '留空则不修改' : '请输入6-20位密码'">
             </div>
             <div class="form-item">
               <label>角色 <span class="required">*</span></label>
@@ -100,8 +99,8 @@
             <div class="form-item">
               <label>状态</label>
               <div class="radio-group">
-                <label><input type="radio" :value="1" v-model="form.status"> 启用</label>
-                <label><input type="radio" :value="0" v-model="form.status"> 禁用</label>
+                <label><input type="radio" name="status" :value="1" v-model="form.status"> 启用</label>
+                <label><input type="radio" name="status" :value="0" v-model="form.status"> 禁用</label>
               </div>
             </div>
           </div>
@@ -120,7 +119,6 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserPage, saveOrUpdateUser, deleteUser, resetPassword } from '@/api/user'
 
-// ===== 数据 =====
 const tableData = ref([])
 const total = ref(0)
 const pageNum = ref(1)
@@ -151,7 +149,6 @@ const roleLabelMap = {
   'STUDENT': '学生'
 }
 
-// ===== 方法 =====
 const loadData = async () => {
   loading.value = true
   try {
@@ -193,12 +190,16 @@ const closeDialog = () => {
 }
 
 const handleSubmit = async () => {
-  if (!form.username || !form.realName || !form.role) {
-    ElMessage.warning('请填写完整信息')
+  if (!form.username || !form.realName) {
+    ElMessage.warning('请填写用户名和真实姓名')
     return
   }
-  if (!form.id && (!form.password || form.password.length < 6)) {
-    ElMessage.warning('新增用户密码至少6位')
+  if (!form.id && !form.password) {
+    ElMessage.warning('新增用户请填写密码')
+    return
+  }
+  if (form.password && form.password.length < 6) {
+    ElMessage.warning('密码至少6位')
     return
   }
   submitting.value = true
@@ -233,7 +234,7 @@ const handleDelete = (id, username) => {
 }
 
 const handleResetPassword = (id, username) => {
-  ElMessageBox.confirm(`确定要重置用户「${username}」的密码为 123456 吗？`, '提示', {
+  ElMessageBox.confirm(`确定要重置用户「${username}」的密码为默认密码 123456 吗？`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
@@ -241,9 +242,10 @@ const handleResetPassword = (id, username) => {
     try {
       await resetPassword(id)
       ElMessage.success('密码已重置为 123456')
+      loadData()
     } catch (error) {
       console.error(error)
-      ElMessage.error('重置失败')
+      ElMessage.error('重置密码失败')
     }
   }).catch(() => {})
 }
@@ -277,6 +279,7 @@ onMounted(() => {
 .tag-green { background: #F0F9EB; color: #67C23A; }
 .tag-gray { background: #F4F4F5; color: #909399; }
 .text-sm { font-size: 13px; }
+.text-muted { color: #909399; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 table th, table td { padding: 12px 14px; text-align: left; font-size: 14px; border-bottom: 1px solid #EBEEF5; }
@@ -303,6 +306,6 @@ table tbody tr:hover { background: #F5F7FA; }
 .form-item .required { color: #F56C6C; margin-left: 2px; }
 .form-item input, .form-item select { height: 36px; border: 1px solid #DCDFE6; border-radius: 6px; padding: 0 12px; font-size: 14px; outline: none; background: #fff; }
 .form-item input:focus, .form-item select:focus { border-color: #409EFF; }
-.radio-group { display: flex; gap: 24px; padding-top: 4px; }
-.radio-group label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-weight: normal; }
+.radio-group { display: flex; gap: 16px; }
+.radio-group label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-weight: 400; }
 </style>

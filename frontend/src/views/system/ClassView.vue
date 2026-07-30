@@ -1,18 +1,18 @@
 <template>
   <div style="padding: 24px;">
     <div class="page-header">
-      <h1>📚 课程管理</h1>
-      <p style="color: #909399; margin-top: 8px;">管理课程信息，支持新增、编辑、删除及选课管理</p>
+      <h1>🏫 班级管理</h1>
+      <p style="color: #909399; margin-top: 8px;">管理班级信息，为学生分配班级</p>
     </div>
 
     <div class="panel">
       <div class="panel-header">
-        <h3>课程列表</h3>
-        <button class="btn btn-primary" @click="openForm()">➕ 新增课程</button>
+        <h3>班级列表</h3>
+        <button class="btn btn-primary" @click="openForm()">➕ 新增班级</button>
       </div>
       <div class="panel-body">
         <div class="toolbar">
-          <input type="text" class="search-input" placeholder="🔍 搜索课程名称或编码" v-model="keyword" @keyup.enter="loadData">
+          <input type="text" class="search-input" placeholder="🔍 搜索班级名称或编码" v-model="keyword" @keyup.enter="loadData">
           <button class="btn btn-default" @click="loadData">搜索</button>
           <button class="btn btn-text" @click="resetSearch">重置</button>
         </div>
@@ -22,13 +22,13 @@
             <thead>
             <tr>
               <th>序号</th>
-              <th>课程编码</th>
-              <th>课程名称</th>
-              <th>学分</th>
-              <th>学时</th>
-              <th>授课教师</th>
-              <th>学期</th>
-              <th style="width:200px">操作</th>
+              <th>班级编码</th>
+              <th>班级名称</th>
+              <th>所属年级</th>
+              <th>班主任</th>
+              <th>学生人数</th>
+              <th>创建时间</th>
+              <th>操作</th>
             </tr>
             </thead>
             <tbody>
@@ -40,16 +40,15 @@
             </tr>
             <tr v-for="(item, index) in tableData" :key="item.id">
               <td>{{ (pageNum - 1) * pageSize + index + 1 }}</td>
-              <td><b>{{ item.courseCode }}</b></td>
-              <td>{{ item.courseName }}</td>
-              <td class="text-center">{{ item.credit }}</td>
-              <td class="text-center">{{ item.hours }}</td>
-              <td>{{ item.teacherName || '-' }}</td>
-              <td>{{ item.semester || '-' }}</td>
+              <td><b>{{ item.classCode }}</b></td>
+              <td>{{ item.className }}</td>
+              <td>{{ item.grade || '-' }}</td>
+              <td>{{ item.headTeacher || '-' }}</td>
+              <td class="text-center"><b>{{ item.studentCount || 0 }}</b></td>
+              <td class="text-sm text-muted">{{ item.createTime?.slice(0,10) || '-' }}</td>
               <td>
                 <button class="btn btn-text btn-sm" @click="openForm(item)">✏️ 编辑</button>
-                <button class="btn btn-text btn-sm" @click="openStudentCourse(item.id, item.courseName)">👥 选课学生</button>
-                <button class="btn btn-text btn-sm" style="color:#F56C6C" @click="handleDelete(item.id, item.courseName)">🗑 删除</button>
+                <button class="btn btn-text btn-sm" style="color:#F56C6C" @click="handleDelete(item.id, item.className)">🗑 删除</button>
               </td>
             </tr>
             </tbody>
@@ -75,37 +74,34 @@
         <div class="modal-body">
           <div class="form-row">
             <div class="form-item">
-              <label>课程编码 <span class="required">*</span></label>
-              <input type="text" v-model="form.courseCode" placeholder="如 CS001" :readonly="!!form.id" style="background:#F5F7FA;">
+              <label>班级编码 <span class="required">*</span></label>
+              <input type="text" v-model="form.classCode" placeholder="如 SE202401" :readonly="!!form.id" style="background:#F5F7FA;">
             </div>
             <div class="form-item">
-              <label>课程名称 <span class="required">*</span></label>
-              <input type="text" v-model="form.courseName" placeholder="请输入课程名称">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-item">
-              <label>学分</label>
-              <input type="number" v-model="form.credit" step="0.5" min="0.5" max="10">
-            </div>
-            <div class="form-item">
-              <label>学时</label>
-              <input type="number" v-model="form.hours" min="1" max="200">
+              <label>班级名称 <span class="required">*</span></label>
+              <input type="text" v-model="form.className" placeholder="如 软件工程1班">
             </div>
           </div>
           <div class="form-row">
             <div class="form-item">
-              <label>授课教师</label>
-              <input type="text" v-model="form.teacherName" placeholder="请输入教师姓名">
-            </div>
-            <div class="form-item">
-              <label>学期</label>
-              <select v-model="form.semester">
+              <label>所属年级</label>
+              <select v-model="form.grade">
                 <option value="">请选择</option>
-                <option value="2026-2027-1">2026-2027-1</option>
-                <option value="2026-2027-2">2026-2027-2</option>
-                <option value="2027-2028-1">2027-2028-1</option>
+                <option value="2024级">2024级</option>
+                <option value="2025级">2025级</option>
+                <option value="2026级">2026级</option>
+                <option value="2027级">2027级</option>
               </select>
+            </div>
+            <div class="form-item">
+              <label>班主任</label>
+              <input type="text" v-model="form.headTeacher" placeholder="请输入班主任姓名">
+            </div>
+          </div>
+          <div class="form-row single">
+            <div class="form-item">
+              <label>学生人数</label>
+              <input type="number" v-model="form.studentCount" min="0" placeholder="0">
             </div>
           </div>
         </div>
@@ -115,24 +111,14 @@
         </div>
       </div>
     </div>
-
-    <!-- 选课管理弹窗 -->
-    <StudentCourseDialog
-        v-model:visible="studentDialogVisible"
-        :course-id="currentCourseId"
-        :course-name="currentCourseName"
-        @success="loadData"
-    />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getCoursePage, saveOrUpdateCourse, deleteCourse } from '@/api/course'
-import StudentCourseDialog from '@/components/StudentCourseDialog.vue'
+import { getClassPage, saveOrUpdateClass, deleteClass } from '@/api/class'
 
-// ===== 数据 =====
 const tableData = ref([])
 const total = ref(0)
 const pageNum = ref(1)
@@ -141,28 +127,21 @@ const keyword = ref('')
 const loading = ref(false)
 
 const dialogVisible = ref(false)
-const dialogTitle = ref('新增课程')
+const dialogTitle = ref('新增班级')
 const submitting = ref(false)
 const form = reactive({
   id: null,
-  courseCode: '',
-  courseName: '',
-  credit: 3.0,
-  hours: 48,
-  teacherName: '',
-  semester: ''
+  classCode: '',
+  className: '',
+  grade: '',
+  headTeacher: '',
+  studentCount: 0
 })
 
-// 选课弹窗
-const studentDialogVisible = ref(false)
-const currentCourseId = ref(null)
-const currentCourseName = ref('')
-
-// ===== 方法 =====
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await getCoursePage(pageNum.value, pageSize.value, keyword.value)
+    const res = await getClassPage(pageNum.value, pageSize.value, keyword.value)
     tableData.value = res.data.records || []
     total.value = res.data.total || 0
   } catch (error) {
@@ -186,11 +165,11 @@ const resetSearch = () => {
 
 const openForm = (row = null) => {
   if (row) {
-    dialogTitle.value = '编辑课程'
+    dialogTitle.value = '编辑班级'
     Object.assign(form, { ...row })
   } else {
-    dialogTitle.value = '新增课程'
-    Object.assign(form, { id: null, courseCode: '', courseName: '', credit: 3.0, hours: 48, teacherName: '', semester: '' })
+    dialogTitle.value = '新增班级'
+    Object.assign(form, { id: null, classCode: '', className: '', grade: '', headTeacher: '', studentCount: 0 })
   }
   dialogVisible.value = true
 }
@@ -200,13 +179,13 @@ const closeDialog = () => {
 }
 
 const handleSubmit = async () => {
-  if (!form.courseCode || !form.courseName) {
-    ElMessage.warning('请填写课程编码和名称')
+  if (!form.classCode || !form.className) {
+    ElMessage.warning('请填写班级编码和名称')
     return
   }
   submitting.value = true
   try {
-    await saveOrUpdateCourse(form)
+    await saveOrUpdateClass(form)
     ElMessage.success('操作成功')
     closeDialog()
     loadData()
@@ -219,27 +198,20 @@ const handleSubmit = async () => {
 }
 
 const handleDelete = (id, name) => {
-  ElMessageBox.confirm(`确定要删除课程「${name}」吗？`, '提示', {
+  ElMessageBox.confirm(`确定要删除班级「${name}」吗？`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
     try {
-      await deleteCourse(id)
+      await deleteClass(id)
       ElMessage.success('删除成功')
       loadData()
     } catch (error) {
       console.error(error)
-      ElMessage.error('删除失败，该课程可能有关联数据')
+      ElMessage.error('删除失败，该班级可能有学生')
     }
   }).catch(() => {})
-}
-
-// 打开选课弹窗
-const openStudentCourse = (courseId, courseName) => {
-  currentCourseId.value = courseId
-  currentCourseName.value = courseName
-  studentDialogVisible.value = true
 }
 
 onMounted(() => {
@@ -265,7 +237,8 @@ onMounted(() => {
 .btn-text { background: transparent; color: #409EFF; }
 .btn-text:hover { background: #ECF5FF; }
 .btn-sm { height: 30px; padding: 0 12px; font-size: 13px; }
-.text-center { text-align: center; }
+.text-sm { font-size: 13px; }
+.text-muted { color: #909399; }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 table th, table td { padding: 12px 14px; text-align: left; font-size: 14px; border-bottom: 1px solid #EBEEF5; }
@@ -286,6 +259,7 @@ table tbody tr:hover { background: #F5F7FA; }
 .modal-body { padding: 20px; overflow-y: auto; max-height: 60vh; }
 .modal-footer { padding: 12px 20px; border-top: 1px solid #EBEEF5; display: flex; justify-content: flex-end; gap: 8px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.form-row.single { grid-template-columns: 1fr; }
 .form-item { display: flex; flex-direction: column; gap: 6px; }
 .form-item label { font-size: 13px; color: #606266; font-weight: 500; }
 .form-item .required { color: #F56C6C; margin-left: 2px; }

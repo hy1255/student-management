@@ -1,264 +1,106 @@
 <template>
-  <div class="app-layout">
-    <!-- 侧边栏 -->
-    <aside class="sidebar">
-      <div class="sidebar-logo">
-        <div class="logo-icon">🎓</div>
-        <span>SIMS</span>
-      </div>
-      <nav class="sidebar-nav">
-        <div class="nav-section">
-          <div class="nav-section-title">导航菜单</div>
-          <router-link to="/dashboard" class="nav-item" :class="{ active: $route.path === '/dashboard' }">
-            <span class="icon">📊</span> 仪表盘
-          </router-link>
-          <router-link to="/student" class="nav-item" :class="{ active: $route.path === '/student' }">
-            <span class="icon">👨‍🎓</span> 学生管理
-          </router-link>
-          <router-link to="/course" class="nav-item" :class="{ active: $route.path === '/course' }">
-            <span class="icon">📚</span> 课程管理
-          </router-link>
-          <router-link to="/exam" class="nav-item" :class="{ active: $route.path === '/exam' }">
-            <span class="icon">📝</span> 考试管理
-          </router-link>
-        </div>
-        <div class="nav-section">
-          <div class="nav-section-title">成绩管理</div>
-          <router-link to="/score/entry" class="nav-item" :class="{ active: $route.path === '/score/entry' }">
-            <span class="icon">✏️</span> 成绩录入
-          </router-link>
-          <router-link to="/score/list" class="nav-item" :class="{ active: $route.path === '/score/list' }">
-            <span class="icon">📋</span> 成绩列表
-          </router-link>
-          <router-link to="/score/stats" class="nav-item" :class="{ active: $route.path === '/score/stats' }">
-            <span class="icon">📈</span> 成绩统计
-          </router-link>
-        </div>
-        <div class="nav-section" style="margin-top: auto; border-top: 1px solid rgba(255,255,255,.08); padding-top: 12px;">
-          <div class="nav-item" @click="handleLogout" style="cursor:pointer;">
-            <span class="icon">🚪</span> 退出登录
-          </div>
-        </div>
-      </nav>
-    </aside>
+  <div style="padding: 24px;">
+    <div class="page-header">
+      <h1>👋 欢迎回来，{{ userInfo?.realName || '用户' }}！</h1>
+      <p style="color: #909399; margin-top: 8px;">今天是 {{ today }}</p>
+    </div>
 
-    <!-- 主内容区 -->
-    <div class="main-area">
-      <header class="header">
-        <div class="header-left">
-          <span class="breadcrumb">首页 / <span class="current-page">{{ pageTitle }}</span></span>
-        </div>
-        <div class="header-right">
-          <span style="font-size:13px;color:#909399;">角色：<b style="color:#409EFF;">{{ roleText }}</b></span>
-          <div class="header-user">
-            <div class="avatar">{{ userInfo?.realName?.charAt(0) || 'U' }}</div>
-            <span class="name">{{ userInfo?.realName || '用户' }}</span>
+    <div class="stat-cards">
+      <div class="stat-card"><div class="stat-icon blue">👨‍🎓</div><div class="stat-info"><div class="stat-value">{{ stats.studentCount }}</div><div class="stat-label">学生总数</div></div></div>
+      <div class="stat-card"><div class="stat-icon green">📚</div><div class="stat-info"><div class="stat-value">{{ stats.courseCount }}</div><div class="stat-label">课程总数</div></div></div>
+      <div class="stat-card"><div class="stat-icon orange">📝</div><div class="stat-info"><div class="stat-value">{{ stats.examCount }}</div><div class="stat-label">考试总数</div></div></div>
+      <div class="stat-card"><div class="stat-icon purple">📊</div><div class="stat-info"><div class="stat-value">{{ stats.avgScore }}</div><div class="stat-label">平均分</div></div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h3>📋 近期考试</h3></div>
+      <div class="panel-body">
+        <div v-if="stats.recentExams && stats.recentExams.length === 0" style="text-align:center;padding:40px 0;color:#909399;">暂无考试安排</div>
+        <div v-else>
+          <div v-for="exam in stats.recentExams" :key="exam.id" class="exam-item">
+            <div class="exam-date">{{ exam.examDate }}</div>
+            <div class="exam-info"><div class="exam-name">{{ exam.examName }}</div><div class="exam-course">{{ exam.courseName || '未知课程' }}</div></div>
+            <span class="tag" :class="getStatusTag(exam.status)">{{ getStatusLabel(exam.status) }}</span>
           </div>
         </div>
-      </header>
-      <div class="content">
-        <router-view />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { getDashboardStats } from '@/api/dashboard'
 
-const router = useRouter()
-const route = useRoute()
 const userInfo = ref(null)
+const stats = ref({
+  studentCount: 0,
+  courseCount: 0,
+  examCount: 0,
+  avgScore: 0,
+  recentExams: []
+})
+const today = ref('')
 
-const roleMap = {
-  'ADMIN': '管理员',
-  'TEACHER': '教师',
-  'STUDENT': '学生'
+const getStatusTag = (status) => {
+  const map = { 'PENDING': 'tag-blue', 'ONGOING': 'tag-green', 'FINISHED': 'tag-gray' }
+  return map[status] || 'tag-gray'
+}
+const getStatusLabel = (status) => {
+  const map = { 'PENDING': '待考', 'ONGOING': '进行中', 'FINISHED': '已结束' }
+  return map[status] || status
 }
 
-const pageTitleMap = {
-  '/dashboard': '仪表盘',
-  '/student': '学生管理',
-  '/course': '课程管理',
-  '/exam': '考试管理',
-  '/score/entry': '成绩录入',
-  '/score/list': '成绩列表',
-  '/score/stats': '成绩统计'
-}
-
-const pageTitle = computed(() => pageTitleMap[route.path] || '页面')
-const roleText = computed(() => roleMap[userInfo.value?.role] || userInfo.value?.role || '用户')
-
-const handleLogout = () => {
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
-  router.push('/login')
+const loadData = async () => {
+  try {
+    const res = await getDashboardStats()
+    const data = res.data
+    stats.value = {
+      studentCount: data.studentCount || 0,
+      courseCount: data.courseCount || 0,
+      examCount: data.examCount || 0,
+      avgScore: data.avgScore || 0,
+      recentExams: data.recentExams || []
+    }
+  } catch (error) {
+    console.error('加载仪表盘数据失败', error)
+  }
 }
 
 onMounted(() => {
   const user = localStorage.getItem('user')
-  if (user) {
-    userInfo.value = JSON.parse(user)
-  }
+  if (user) userInfo.value = JSON.parse(user)
+  const now = new Date()
+  const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+  today.value = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${weekdays[now.getDay()]}`
+  loadData()
 })
 </script>
 
 <style scoped>
-.app-layout {
-  display: flex;
-  min-height: 100vh;
-  background: #F2F3F5;
-}
-.sidebar {
-  width: 220px;
-  background: linear-gradient(180deg, #1E293B 0%, #0F172A 100%);
-  color: #fff;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  z-index: 100;
-}
-.sidebar-logo {
-  height: 56px;
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-  gap: 10px;
-}
-.logo-icon {
-  width: 34px;
-  height: 34px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-}
-.sidebar-logo span {
-  font-size: 18px;
-  font-weight: 600;
-}
-.sidebar-nav {
-  flex: 1;
-  padding: 12px 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-}
-.nav-section {
-  padding: 0 16px;
-}
-.nav-section-title {
-  font-size: 12px;
-  color: rgba(255,255,255,.3);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  padding: 12px 4px 6px;
-  font-weight: 600;
-}
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 16px;
-  margin: 2px 0;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  color: rgba(255,255,255,.65);
-  transition: all .2s;
-  text-decoration: none;
-}
-.nav-item:hover {
-  color: #fff;
-  background: rgba(255,255,255,.06);
-}
-.nav-item.active {
-  color: #fff;
-  background: rgba(102,126,234,.25);
-  font-weight: 500;
-}
-.nav-item .icon {
-  font-size: 18px;
-  width: 20px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.main-area {
-  flex: 1;
-  margin-left: 220px;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-.header {
-  height: 56px;
-  background: #fff;
-  border-bottom: 1px solid #EBEEF5;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-  flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  z-index: 50;
-}
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.breadcrumb {
-  font-size: 13px;
-  color: #909399;
-}
-.current-page {
-  color: #303133;
-}
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.header-user {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.header-user:hover {
-  background: #F5F7FA;
-}
-.avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 600;
-  font-size: 14px;
-}
-.name {
-  font-size: 14px;
-  color: #303133;
-  font-weight: 500;
-}
-.content {
-  flex: 1;
-  padding: 0;
-  background: #F2F3F5;
-}
+.page-header { margin-bottom: 20px; }
+.page-header h1 { font-size: 24px; font-weight: 600; }
+.stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+.stat-card { background: #fff; border-radius: 12px; padding: 20px 24px; box-shadow: 0 2px 12px rgba(0,0,0,.08); display: flex; align-items: center; gap: 16px; }
+.stat-icon { width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+.stat-icon.blue { background: #E8F4FD; color: #409EFF; }
+.stat-icon.green { background: #F0F9EB; color: #67C23A; }
+.stat-icon.orange { background: #FDF6EC; color: #E6A23C; }
+.stat-icon.purple { background: #F3E8FF; color: #9333EA; }
+.stat-info .stat-value { font-size: 28px; font-weight: 700; color: #303133; line-height: 1; }
+.stat-info .stat-label { font-size: 14px; color: #909399; margin-top: 4px; }
+.panel { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); margin-top: 20px; }
+.panel-header { padding: 16px 20px; border-bottom: 1px solid #EBEEF5; }
+.panel-header h3 { font-size: 16px; font-weight: 600; }
+.panel-body { padding: 20px; }
+.exam-item { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid #F5F7FA; }
+.exam-item:last-child { border-bottom: none; }
+.exam-date { font-size: 13px; color: #909399; min-width: 90px; }
+.exam-info { flex: 1; }
+.exam-name { font-weight: 500; }
+.exam-course { font-size: 13px; color: #909399; }
+.tag { display: inline-block; padding: 2px 10px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+.tag-blue { background: #ECF5FF; color: #409EFF; }
+.tag-green { background: #F0F9EB; color: #67C23A; }
+.tag-gray { background: #F4F4F5; color: #909399; }
 </style>

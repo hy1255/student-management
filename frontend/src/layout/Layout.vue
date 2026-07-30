@@ -34,7 +34,6 @@
             <span class="icon">📈</span> 成绩统计
           </router-link>
         </div>
-        <!-- 系统管理 -->
         <div class="nav-section">
           <div class="nav-section-title">系统管理</div>
           <router-link to="/system/menu" class="nav-item" active-class="active">
@@ -46,8 +45,13 @@
           <router-link to="/system/user" class="nav-item" active-class="active">
             <span class="icon">👥</span> 用户管理
           </router-link>
+          <router-link to="/system/class" class="nav-item" active-class="active">
+            <span class="icon">🏫</span> 班级管理
+          </router-link>
+          <router-link to="/system/log" class="nav-item" active-class="active">
+            <span class="icon">📜</span> 操作日志
+          </router-link>
         </div>
-        <!-- 退出登录 -->
         <div class="nav-section" style="margin-top: auto; border-top: 1px solid rgba(255,255,255,.08); padding-top: 12px;">
           <div class="nav-item" @click="handleLogout" style="cursor:pointer;">
             <span class="icon">🚪</span> 退出登录
@@ -98,7 +102,12 @@ const pageTitleMap = {
   '/exam': '考试管理',
   '/score/entry': '成绩录入',
   '/score/list': '成绩列表',
-  '/score/stats': '成绩统计'
+  '/score/stats': '成绩统计',
+  '/system/menu': '菜单管理',
+  '/system/role': '角色管理',
+  '/system/user': '用户管理',
+  '/system/class': '班级管理',
+  '/system/log': '操作日志'
 }
 
 const pageTitle = computed(() => pageTitleMap[route.path] || '页面')

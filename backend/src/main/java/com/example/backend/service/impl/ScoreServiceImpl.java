@@ -2,9 +2,11 @@ package com.example.backend.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.backend.entity.Exam;
 import com.example.backend.entity.Score;
 import com.example.backend.entity.Student;
 import com.example.backend.entity.StudentCourse;
+import com.example.backend.mapper.ExamMapper;
 import com.example.backend.mapper.ScoreMapper;
 import com.example.backend.mapper.StudentCourseMapper;
 import com.example.backend.mapper.StudentMapper;
@@ -17,7 +19,7 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Service   // ⬅️ 必须有这个注解！
+@Service
 public class ScoreServiceImpl implements ScoreService {
 
     @Autowired
@@ -29,26 +31,42 @@ public class ScoreServiceImpl implements ScoreService {
     @Autowired
     private StudentMapper studentMapper;
 
+    @Autowired
+    private ExamMapper examMapper;   // 必须注入
+
     @Override
     public List<Map<String, Object>> getScoresByExamId(Long examId) {
-        LambdaQueryWrapper<StudentCourse> scWrapper = new LambdaQueryWrapper<>();
-        scWrapper.eq(StudentCourse::getCourseId, examId);
-        List<StudentCourse> scList = studentCourseMapper.selectList(scWrapper);
-        List<Long> studentIds = scList.stream().map(StudentCourse::getStudentId).collect(Collectors.toList());
-
-        if (studentIds.isEmpty()) {
+        // 1. 查询考试信息，获取课程ID
+        Exam exam = examMapper.selectById(examId);
+        if (exam == null) {
             return new ArrayList<>();
         }
+        Long courseId = exam.getCourseId();
 
+        // 2. 查询该课程下的选课学生
+        LambdaQueryWrapper<StudentCourse> scWrapper = new LambdaQueryWrapper<>();
+        scWrapper.eq(StudentCourse::getCourseId, courseId);
+        List<StudentCourse> scList = studentCourseMapper.selectList(scWrapper);
+        if (scList.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Long> studentIds = scList.stream()
+                .map(StudentCourse::getStudentId)
+                .collect(Collectors.toList());
+
+        // 3. 获取学生信息
         LambdaQueryWrapper<Student> sWrapper = new LambdaQueryWrapper<>();
         sWrapper.in(Student::getId, studentIds);
         List<Student> students = studentMapper.selectList(sWrapper);
 
+        // 4. 获取该考试已有的成绩
         LambdaQueryWrapper<Score> scoreWrapper = new LambdaQueryWrapper<>();
         scoreWrapper.eq(Score::getExamId, examId);
         List<Score> scores = scoreMapper.selectList(scoreWrapper);
-        Map<Long, Score> scoreMap = scores.stream().collect(Collectors.toMap(Score::getStudentId, s -> s));
+        Map<Long, Score> scoreMap = scores.stream()
+                .collect(Collectors.toMap(Score::getStudentId, s -> s));
 
+        // 5. 组装结果
         List<Map<String, Object>> result = new ArrayList<>();
         for (Student student : students) {
             Map<String, Object> item = new HashMap<>();
@@ -176,6 +194,7 @@ public class ScoreServiceImpl implements ScoreService {
         return result;
     }
 
+    // ⬇️ 新增：实现 deleteById 方法 ⬇️
     @Override
     public void deleteById(Long id) {
         scoreMapper.deleteById(id);
